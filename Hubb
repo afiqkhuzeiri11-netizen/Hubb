@@ -1,10 +1,11 @@
--- [[ CYBER ENGINE X.8 - 100% WORKING DIRECT EXECUTE ]] --
+-- [[ CYBER ENGINE X.8 - 100% INSTANT GUI FIX ]] --
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
+-- Load Rayfield UI dengan mekanisme fallback aman
 local success, Rayfield = pcall(function()
     return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 end)
@@ -64,4 +65,60 @@ PlayerTab:CreateButton({
                      local name = obj.Name:lower()
                      if name == "plot" or name == "base" or name:find("spawn") then
                          local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-                         if part and part:IsA("BasePart") and (part.Position
+                         if part and part:IsA("BasePart") and (part.Position - hrp.Position).Magnitude < 500 then
+                             hrp.CFrame = part.CFrame * CFrame.new(0, 5, 0)
+                         end
+                     end
+                 end
+             end)
+         end
+      end)
+   end,
+})
+
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        local char = Player.Character
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        
+        if hum then hum.WalkSpeed = walkSpeedVal end
+
+        if (isAutoEgg or isMagnet) and hrp then
+            for _, obj in pairs(Workspace:GetDescendants()) do
+                pcall(function()
+                    if obj and (obj:IsA("Model") or obj:IsA("BasePart")) then
+                        local name = obj.Name:lower()
+                        if (name:find("egg") or name:find("telur") or name:find("nest")) and not name:find("player") then
+                            local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                            if part and part:IsA("BasePart") then
+                                if (part.Position - hrp.Position).Magnitude < 40 then
+                                    if isMagnet then
+                                        part.CFrame = hrp.CFrame * CFrame.new(0, 0, -2)
+                                    end
+                                    local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true) or part:FindFirstChildWhichIsA("ProximityPrompt", true)
+                                    if prompt and fireproximityprompt then
+                                        fireproximityprompt(prompt)
+                                    end
+                                    if firetouchinterest then
+                                        firetouchinterest(hrp, part, 0)
+                                        task.wait(0.02)
+                                        firetouchinterest(hrp, part, 1)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end)
+            end
+        end
+    end)
+end)
+
+Rayfield:Notify({
+   Title = "Cyber Engine Berhasil!",
+   Content = "GUI X.8 Aktif Sempurna.",
+   Duration = 4,
+   Image = 4483362458,
+})
