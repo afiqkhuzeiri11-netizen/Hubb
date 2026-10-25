@@ -1,31 +1,10 @@
--- [[ CYBER ENGINE X.7 - DIRECT EXECUTE UI FIX ]] --
+-- [[ CYBER ENGINE X.8 - 100% WORKING DIRECT EXECUTE ]] --
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Lighting = game:GetService("Lighting")
 local Player = Players.LocalPlayer
 
--- ULTRA BYPASS & ANTI-KICK SHIELD
-pcall(function()
-    local mt = getrawmetatable(game)
-    if mt then
-        setreadonly(mt, false)
-        local oldNamecall = mt.__namecall
-        mt.__namecall = newcclosure(function(self, ...)
-            local method = getnamecallmethod()
-            if method and (method:lower() == "kick" or method:lower() == "ban") and self == Player then
-                return nil
-            end
-            return oldNamecall(self, ...)
-        end)
-        setreadonly(mt, true)
-    end
-end)
-
--- LOAD RAYFIELD UI LIBRARY DENGAN FALLBACK AMAN
 local success, Rayfield = pcall(function()
     return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 end)
@@ -35,120 +14,54 @@ if not success or not Rayfield then
 end
 
 local Window = Rayfield:CreateWindow({
-   Name = "⚡ Cyber Engine X.7 // Auto Collect Egg",
-   LoadingTitle = "Memuat Sistem Pengumpul Telur...",
+   Name = "⚡ Cyber Engine X.8 // Train Pets for Eggs",
+   LoadingTitle = "Memuat Cyber Engine...",
    LoadingSubtitle = "by Cyber Engine",
    ConfigurationSaving = { Enabled = false },
    KeySystem = false, 
 })
 
-local EggTab = Window:CreateTab("🥚 Auto Collect Egg", 4483362458)
-local SpeedTab = Window:CreateTab("🚀 Speed & Movement", 4483362458)
-local PlotTab = Window:CreateTab("🏡 Auto Plot & Base", 4483362458)
-local UtilityTab = Window:CreateTab("🛠️ Useful Features", 4483362458)
-local MiscTab = Window:CreateTab("🛡️ Security & Misc", 4483362458)
+local MainTab = Window:CreateTab("🥚 Auto Farm & Egg", 4483362458)
+local PlayerTab = Window:CreateTab("🚀 Player & Plot", 4483362458)
 
+local isAutoEgg = false
+local isMagnet = false
 local walkSpeedVal = 16
-local isSpeedEnabled = false
-local isInfiniteJump = false
-local isNoclipActive = false
-local isAutoCollectEgg = false
-local isMagnetEgg = false
-local noclipConnection = nil
 
--- TAB 1: AUTO COLLECT EGG
-EggTab:CreateSection("🥚 Pengumpulan Telur Otomatis")
-
-EggTab:CreateToggle({
-   Name = "🥚 Auto Collect Egg (Ambil Telur Sekitar)",
+MainTab:CreateSection("🥚 Pengumpulan Telur Otomatis")
+MainTab:CreateToggle({
+   Name = "🥚 Auto Collect Egg (Ambil Sekitar)",
    CurrentValue = false,
-   Callback = function(Value)
-      isAutoCollectEgg = Value
-   end,
+   Callback = function(v) isAutoEgg = v end,
 })
 
-EggTab:CreateToggle({
-   Name = "🧲 Magnet Egg (Tarik Telur ke Karakter)",
+MainTab:CreateToggle({
+   Name = "🧲 Magnet Egg (Tarik Telur)",
    CurrentValue = false,
-   Callback = function(Value)
-      isMagnetEgg = Value
-   end,
+   Callback = function(v) isMagnet = v end,
 })
 
--- TAB 2: SPEED & MOVEMENT
-SpeedTab:CreateSection("⚡ Pengaturan Kecepatan")
-
-SpeedTab:CreateToggle({
-   Name = "Aktifkan Custom WalkSpeed",
-   CurrentValue = false,
-   Callback = function(Value)
-      isSpeedEnabled = Value
-   end,
-})
-
-SpeedTab:CreateSlider({
-   Name = "Kecepatan Jalan (WalkSpeed)",
-   Range = {16, 250},
+PlayerTab:CreateSection("🚀 Pengaturan Karakter")
+PlayerTab:CreateSlider({
+   Name = "WalkSpeed Custom",
+   Range = {16, 200},
    Increment = 1,
    CurrentValue = 16,
-   Flag = "SpeedSlider",
-   Callback = function(Value)
-      walkSpeedVal = Value
-   end,
+   Callback = function(v) walkSpeedVal = v end,
 })
 
-SpeedTab:CreateToggle({
-   Name = "🚀 Infinite Jump (Loncat Di Udara)",
-   CurrentValue = false,
-   Callback = function(Value)
-      isInfiniteJump = Value
-   end,
-})
-
--- TAB 3: AUTO PLOT & INSTANT TELEPORT
-PlotTab:CreateSection("🏡 Teleport Instan ke Plot / Base")
-
-PlotTab:CreateButton({
-   Name = "🏠 Teleport Langsung ke Plot / Base Saya",
+PlayerTab:CreateButton({
+   Name = "🏠 Teleport Instan ke Plot / Base",
    Callback = function()
       pcall(function()
          local char = Player.Character
          if not char or not char:FindFirstChild("HumanoidRootPart") then return end
          local hrp = char.HumanoidRootPart
-         local targetCFrame = nil
-
+         
          for _, obj in pairs(Workspace:GetDescendants()) do
              pcall(function()
-                 if obj and (obj:IsA("Model") or obj:IsA("Folder") or obj:IsA("BasePart")) then
+                 if obj and (obj:IsA("BasePart") or obj:IsA("Model")) then
                      local name = obj.Name:lower()
-                     if (name:find(Player.Name:lower()) or (Player.DisplayName and name:find(Player.DisplayName:lower()))) 
-                        and (name:find("plot") or name:find("base") or name:find("land")) then
+                     if name == "plot" or name == "base" or name:find("spawn") then
                          local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-                         if part and part:IsA("BasePart") then
-                             targetCFrame = part.CFrame * CFrame.new(0, 5, 0)
-                         end
-                     end
-                 end
-             end)
-             if targetCFrame then break end
-         end
-
-         if not targetCFrame then
-             for _, obj in pairs(Workspace:GetDescendants()) do
-                 pcall(function()
-                     if obj and (obj:IsA("BasePart") or obj:IsA("Model")) then
-                         local name = obj.Name:lower()
-                         if name == "plot" or name == "base" or name == "spawn" then
-                             local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-                             if part and part:IsA("BasePart") then
-                                 if (part.Position - hrp.Position).Magnitude < 400 then
-                                     targetCFrame = part.CFrame * CFrame.new(0, 5, 0)
-                                 end
-                             end
-                         end
-                     end
-                 end)
-                 if targetCFrame then break end
-             end
-         end
-
+                         if part and part:IsA("BasePart") and (part.Position
