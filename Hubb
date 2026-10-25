@@ -1,11 +1,10 @@
--- [[ CYBER ENGINE X.8 - 100% INSTANT GUI FIX ]] --
+-- [[ CYBER ENGINE X.8 - NO DROP SAFE ZONE TELEPORT ]] --
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
--- Load Rayfield UI dengan mekanisme fallback aman
 local success, Rayfield = pcall(function()
     return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 end)
@@ -27,9 +26,12 @@ local PlayerTab = Window:CreateTab("🚀 Player & Plot", 4483362458)
 
 local isAutoEgg = false
 local isMagnet = false
+local isAutoSafeZone = true
 local walkSpeedVal = 16
+local lastSafeTime = 0
 
 MainTab:CreateSection("🥚 Pengumpulan Telur Otomatis")
+
 MainTab:CreateToggle({
    Name = "🥚 Auto Collect Egg (Ambil Sekitar)",
    CurrentValue = false,
@@ -42,7 +44,14 @@ MainTab:CreateToggle({
    Callback = function(v) isMagnet = v end,
 })
 
+MainTab:CreateToggle({
+   Name = "🛡️ Auto Teleport Aman (Anti-Drop Egg)",
+   CurrentValue = true,
+   Callback = function(v) isAutoSafeZone = v end,
+})
+
 PlayerTab:CreateSection("🚀 Pengaturan Karakter")
+
 PlayerTab:CreateSlider({
    Name = "WalkSpeed Custom",
    Range = {16, 200},
@@ -58,24 +67,60 @@ PlayerTab:CreateButton({
          local char = Player.Character
          if not char or not char:FindFirstChild("HumanoidRootPart") then return end
          local hrp = char.HumanoidRootPart
+         local targetCFrame = nil
          
          for _, obj in pairs(Workspace:GetDescendants()) do
              pcall(function()
                  if obj and (obj:IsA("BasePart") or obj:IsA("Model")) then
                      local name = obj.Name:lower()
-                     if name == "plot" or name == "base" or name:find("spawn") then
+                     if name == "plot" or name == "base" or name:find("spawn") or name:find("safe") then
                          local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-                         if part and part:IsA("BasePart") and (part.Position - hrp.Position).Magnitude < 500 then
-                             hrp.CFrame = part.CFrame * CFrame.new(0, 5, 0)
+                         if part and part:IsA("BasePart") then
+                             targetCFrame = part.CFrame * CFrame.new(0, 5, 0)
                          end
                      end
                  end
              end)
+             if targetCFrame then break end
+         end
+
+         if targetCFrame then
+             -- Pindahkan karakter beserta objek yang sedang dipegang secara bersamaan
+             for _, desc in pairs(char:GetDescendants()) do
+                 if desc:IsA("BasePart") and desc.Name ~= "HumanoidRootPart" then
+                     desc.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                 end
+             end
+             hrp.CFrame = targetCFrame
+             Rayfield:Notify({ Title = "Safe Zone", Content = "Berhasil teleport ke area aman!", Duration = 2 })
          end
       end)
    end,
 })
 
+-- Fungsi Mencari Posisi Safe Zone / Plot Secara Otomatis
+local function getSafeZonePosition()
+    local targetCFrame = nil
+    pcall(function()
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            pcall(function()
+                if obj and (obj:IsA("BasePart") or obj:IsA("Model")) then
+                    local name = obj.Name:lower()
+                    if name == "plot" or name == "base" or name:find("spawn") or name:find("safe") then
+                        local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                        if part and part:IsA("BasePart") then
+                            targetCFrame = part.CFrame * CFrame.new(0, 5, 0)
+                        end
+                    end
+                end
+            end)
+            if targetCFrame then break end
+        end
+    end)
+    return targetCFrame
+end
+
+-- BACKGROUND LOOP DENGAN ANTI-DROP TELEPORT
 RunService.Heartbeat:Connect(function()
     pcall(function()
         local char = Player.Character
@@ -85,6 +130,48 @@ RunService.Heartbeat:Connect(function()
         
         if hum then hum.WalkSpeed = walkSpeedVal end
 
+        -- Cek apakah karakter sedang memegang telur curian
+        if isAutoSafeZone and hrp and (tick() - lastSafeTime > 3) then
+            local carriedEggPart = nil
+            
+            -- Mendeteksi part spesifik dari telur yang sedang menempel/dipegang karakter
+            for _, child in pairs(char:GetDescendants()) do
+                if child:IsA("BasePart") or child:IsA("Model") then
+                    local cName = child.Name:lower()
+                    if cName:find("egg") or cName:find("telur") or cName:find("hold") or cName:find("carry") then
+                        carriedEggPart = child:IsA("Model") and (child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")) or child
+                        break
+                    end
+                end
+            end
+
+            if carriedEggPart then
+                local safePos = getSafeZonePosition()
+                if safePos then
+                    -- Matikan gaya jatuh sesaat sebelum teleport agar objek telur tidak terlempar/drop
+                    for _, desc in pairs(char:GetDescendants()) do
+                        if desc:IsA("BasePart") then
+                            desc.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                        end
+                    end
+                    if carriedEggPart:IsA("BasePart") then
+                        carriedEggPart.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                    end
+
+                    -- Teleportasi instan karakter bersamaan dengan offset aman
+                    hrp.CFrame = safePos
+                    lastSafeTime = tick()
+                    
+                    Rayfield:Notify({
+                        Title = "🛡️ Safe Zone Tercapai!",
+                        Content = "Telur berhasil diamankan tanpa drop!",
+                        Duration = 3,
+                    })
+                end
+            end
+        end
+
+        -- Logika Auto Collect & Magnet Egg
         if (isAutoEgg or isMagnet) and hrp then
             for _, obj in pairs(Workspace:GetDescendants()) do
                 pcall(function()
@@ -118,7 +205,7 @@ end)
 
 Rayfield:Notify({
    Title = "Cyber Engine Berhasil!",
-   Content = "GUI X.8 Aktif Sempurna.",
+   Content = "Anti-Drop Safe Zone Aktif.",
    Duration = 4,
    Image = 4483362458,
 })
