@@ -1,4 +1,4 @@
--- [[ CYBER ENGINE X.7 - AUTO COLLECT EGG & MAGNET ]] --
+-- [[ CYBER ENGINE X.7 - DIRECT EXECUTE UI FIX ]] --
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -25,6 +25,7 @@ pcall(function()
     end
 end)
 
+-- LOAD RAYFIELD UI LIBRARY DENGAN FALLBACK AMAN
 local success, Rayfield = pcall(function()
     return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 end)
@@ -55,7 +56,7 @@ local isAutoCollectEgg = false
 local isMagnetEgg = false
 local noclipConnection = nil
 
--- TAB 1: AUTO COLLECT EGG (FITUR UTAMA BARU)
+-- TAB 1: AUTO COLLECT EGG
 EggTab:CreateSection("🥚 Pengumpulan Telur Otomatis")
 
 EggTab:CreateToggle({
@@ -119,3 +120,35 @@ PlotTab:CreateButton({
          for _, obj in pairs(Workspace:GetDescendants()) do
              pcall(function()
                  if obj and (obj:IsA("Model") or obj:IsA("Folder") or obj:IsA("BasePart")) then
+                     local name = obj.Name:lower()
+                     if (name:find(Player.Name:lower()) or (Player.DisplayName and name:find(Player.DisplayName:lower()))) 
+                        and (name:find("plot") or name:find("base") or name:find("land")) then
+                         local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                         if part and part:IsA("BasePart") then
+                             targetCFrame = part.CFrame * CFrame.new(0, 5, 0)
+                         end
+                     end
+                 end
+             end)
+             if targetCFrame then break end
+         end
+
+         if not targetCFrame then
+             for _, obj in pairs(Workspace:GetDescendants()) do
+                 pcall(function()
+                     if obj and (obj:IsA("BasePart") or obj:IsA("Model")) then
+                         local name = obj.Name:lower()
+                         if name == "plot" or name == "base" or name == "spawn" then
+                             local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                             if part and part:IsA("BasePart") then
+                                 if (part.Position - hrp.Position).Magnitude < 400 then
+                                     targetCFrame = part.CFrame * CFrame.new(0, 5, 0)
+                                 end
+                             end
+                         end
+                     end
+                 end)
+                 if targetCFrame then break end
+             end
+         end
+
